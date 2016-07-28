@@ -8,7 +8,7 @@
 	</parent>
 
 	<artifactId>hp-application-automation-tools-plugin</artifactId>
-	<version>4.5.0-SNAPSHOT</version>
+	<version>4.6.0-SNAPSHOT</version>
 	<packaging>hpi</packaging>
 	<name>HP Application Automation Tools</name>
 	<description>Allowing to run HP testing tools tests: Unified Functional Testing, QuickTest Professional, Service Test, Mobile Center and Performance Center
@@ -45,6 +45,14 @@
 	</scm>
 
 	<developers>
+		<developer>
+			<id>YafimK</id>
+			<name>Fima (Yafim) Kazak</name>
+			<email>kazak@hpe.com</email>
+			<roles>
+				<role>Global owner and LoadRuner Dev</role>
+			</roles>
+		</developer>
 		<developer>
 			<id>imrman</id>
 			<name>Avishai Moshka</name>
@@ -122,6 +130,14 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-release-plugin</artifactId>
 				<version>2.5.3</version>
+			</plugin>
+			<!-- The following was added to fix Releasing using jdk 1.8-->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<configuration>
+					<additionalparam>-Xdoclint:none</additionalparam>
+				</configuration>
 			</plugin>
 			<!--  -->
 			<plugin>
