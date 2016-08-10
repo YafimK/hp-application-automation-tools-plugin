@@ -1,4 +1,5 @@
 version: '{build}'
+test: off
 install:
   - ps: |
       Add-Type -AssemblyName System.IO.Compression.FileSystem
