@@ -179,7 +179,7 @@
 						</goals>
 
 						<configuration>
-							<skip>false</skip>
+							<skip>true</skip>
 							<executable>java</executable>
 							<arguments>
 								<argument> -jar</argument>
