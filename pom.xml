@@ -328,4 +328,36 @@
 			<version>1.19</version>
 		</dependency>
 	</dependencies>
+	
+	<profiles>
+		<profile>
+		  <id>bintray</id>
+		  <activation>
+			<activeByDefault>false</activeByDefault>
+			<property>
+			  <name>target-env</name>
+			  <value>bintray</value>
+			</property>
+			<!-- change this to false, if you don't like to have it on per default -->
+		  </activation>
+		  <distributionManagement>
+			<repository>
+			 <id>bintray-hpsauth-HPE_JENKINS_PLUGIN</id>
+			 <name>hpsauth-HPE_JENKINS_PLUGIN</name>
+			 <url>https://api.bintray.com/maven/hpsauth/HPE_JENKINS_PLUGIN/hp-application-automation-tools-plugin/;publish=1</url>
+			</repository>
+			</distributionManagement>
+		  <repositories>
+		  <repository>
+			<snapshots>
+			   <enabled>false</enabled>
+			</snapshots>
+			 <id>bintray-hpsauth-HPE_JENKINS_PLUGIN</id>
+			 <name>hpsauth-HPE_JENKINS_PLUGIN</name>
+			 <url>https://api.bintray.com/maven/hpsauth/HPE_JENKINS_PLUGIN/hp-application-automation-tools-plugin/;publish=1</url>
+			</repository>
+		  </repositories>
+		</profile>
+	</profiles>
+	
 </project>
