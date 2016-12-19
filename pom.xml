@@ -334,10 +334,7 @@
 		  <id>bintray</id>
 		  <activation>
 			<activeByDefault>false</activeByDefault>
-			<property>
-			  <name>target-env</name>
-			  <value>bintray</value>
-			</property>
+
 			<!-- change this to false, if you don't like to have it on per default -->
 		  </activation>
 		  <distributionManagement>
@@ -350,7 +347,7 @@
 		  <repositories>
 		  <repository>
 			<snapshots>
-			   <enabled>false</enabled>
+			   <enabled>true</enabled>
 			</snapshots>
 			 <id>bintray-hpsauth-HPE_JENKINS_PLUGIN</id>
 			 <name>hpsauth-HPE_JENKINS_PLUGIN</name>
