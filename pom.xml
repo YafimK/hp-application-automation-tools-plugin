@@ -368,7 +368,7 @@
 				<uniqueVersion>true</uniqueVersion>
 			 <id>bintray-hpsauth-HPE_JENKINS_PLUGIN</id>
 			 <name>hpsauth-HPE_JENKINS_PLUGIN</name>
-			 <url>https://api.bintray.com/maven/hpsauth/HPE_JENKINS_PLUGIN/hp-application-automation-tools-plugin/;publish=1</url>
+			 <url>https://api.bintray.com/maven/hpsauth/HPE_JENKINS_PLUGIN/hp-application-automation-tools-plugin/</url>
 			</snapshotRepository>
 			</distributionManagement>
 		  <repositories>
