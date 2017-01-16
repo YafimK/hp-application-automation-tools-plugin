@@ -30,12 +30,16 @@
 		<workflow.version>2.2</workflow.version>
 	</properties>
 
-	<!--<distributionManagement>
+<distributionManagement>
 		<repository>
-			<id>maven.jenkins-ci.org</id>
-			<url>http://maven.jenkins-ci.org:8081/</url>
+		  <id>repo.jenkins-ci.org</id>
+		  <url>https://repo.jenkins-ci.org/releases</url>
 		</repository>
-	</distributionManagement>-->
+		<snapshotRepository>
+			<id>maven.jenkins-ci.org</id>
+		  <url>https://repo.jenkins-ci.org/snapshots</url>
+		</snapshotRepository>
+</distributionManagement>
 
 	<scm>
 		<connection>scm:git:ssh://github.com/hpsa/hp-application-automation-tools-plugin.git</connection>
@@ -348,37 +352,5 @@
 			<version>1.19</version>
 		</dependency>
 	</dependencies>
-	
-	<profiles>
-		<profile>
-		  <id>bintray</id>
-		  <activation>
-			<activeByDefault>false</activeByDefault>
-
-			<!-- change this to false, if you don't like to have it on per default -->
-		  </activation>
-		  <distributionManagement>
-			<repository>
-			 <id>bintray-hpsauth-HPE_JENKINS_PLUGIN</id>
-			 <name>hpsauth-HPE_JENKINS_PLUGIN</name>
-			 <url>https://api.bintray.com/maven/hpsauth/HPE_JENKINS_PLUGIN/hp-application-automation-tools-plugin/;publish=1</url>
-			</repository>
-			
-			<snapshotRepository>
-				<uniqueVersion>true</uniqueVersion>
-			 <id>bintray-hpsauth-HPE_JENKINS_PLUGIN</id>
-			 <name>hpsauth-HPE_JENKINS_PLUGIN</name>
-			 <url>https://api.bintray.com/maven/hpsauth/HPE_JENKINS_PLUGIN/hp-application-automation-tools-plugin/</url>
-			</snapshotRepository>
-			</distributionManagement>
-		  <repositories>
-		  <repository>
-			 <id>bintray-hpsauth-HPE_JENKINS_PLUGIN</id>
-			 <name>hpsauth-HPE_JENKINS_PLUGIN</name>
-			 <url>https://api.bintray.com/maven/hpsauth/HPE_JENKINS_PLUGIN/hp-application-automation-tools-plugin/;publish=1</url>
-			</repository>
-		  </repositories>
-		</profile>
-	</profiles>
 	
 </project>
