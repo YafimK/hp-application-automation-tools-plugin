@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -117,36 +117,36 @@ namespace LRAnalysisLauncher
         public static Dictionary<string, Dictionary<string, double>> CalcFailedTransPercent(LrAnalysis lrAnalysis)
         {
             var transDictionary = new Dictionary<string, Dictionary<string, double>>();
-            //Console.WriteLine("Adding Transaction statistics");
-            //var transactionGraph = lrAnalysis.Session.OpenGraph("TransactionSummary");
-            //if (transactionGraph == null)
-            //{
-            //    return transDictionary;
-            //}
-            //transactionGraph.Filter.Reset();
-            //transactionGraph.Granularity = 4;
-            //FilterItem filterDimension;
-            //if (!transactionGraph.Filter.TryGetValue("Transaction End Status", out filterDimension))
-            //{
-            //    return transDictionary;
-            //}
+            Console.WriteLine("Adding Transaction statistics");
+            var transactionGraph = lrAnalysis.Session.OpenGraph("TransactionSummary");
+            if (transactionGraph == null)
+            {
+                return transDictionary;
+            }
+            transactionGraph.Filter.Reset();
+            transactionGraph.Granularity = 4;
+            FilterItem filterDimension;
+            if (!transactionGraph.Filter.TryGetValue("Transaction End Status", out filterDimension))
+            {
+                return transDictionary;
+            }
 
-            //foreach (var series in transactionGraph.Series)
-            //{
-            //    SeriesAttributeValue a;
-            //    if (!series.Attributes.TryGetValue("Event Name", out a)) continue;
-            //    SeriesAttributeValue transEndStatusAttr;
+            foreach (var series in transactionGraph.Series)
+            {
+                SeriesAttributeValue a;
+                if (!series.Attributes.TryGetValue("Event Name", out a)) continue;
+                SeriesAttributeValue transEndStatusAttr;
 
-            //    if (!series.Attributes.TryGetValue("Transaction End Status", out transEndStatusAttr)) continue;
+                if (!series.Attributes.TryGetValue("Transaction End Status", out transEndStatusAttr)) continue;
 
-            //    Dictionary<string, double> value;
-            //    if (!transDictionary.TryGetValue(a.Value.ToString(), out value))
-            //    {
-            //        transDictionary.Add(a.Value.ToString(),
-            //            new Dictionary<string, double>() {{"Pass", 0}, {"Fail", 0}, {"Stop", 0}});
-            //    }
-            //    (transDictionary[a.Value.ToString()])[transEndStatusAttr.Value.ToString()] = series.Points[0].Value;
-            //}
+                Dictionary<string, double> value;
+                if (!transDictionary.TryGetValue(a.Value.ToString(), out value))
+                {
+                    transDictionary.Add(a.Value.ToString(),
+                        new Dictionary<string, double>() { { "Pass", 0 }, { "Fail", 0 }, { "Stop", 0 } });
+                }
+                (transDictionary[a.Value.ToString()])[transEndStatusAttr.Value.ToString()] = series.Points[0].Value;
+            }
         
             return transDictionary;
         }
@@ -200,9 +200,9 @@ namespace LRAnalysisLauncher
         /// Returns scenario duration
         /// </summary>
         /// <returns>Scenario duration</returns>
-        public static String GetScenarioDuration(Run run)
+        public static String GetScenarioDuration(DateTime startTime, DateTime endTime)
         {
-            var testDuration = run.EndTime - run.StartTime;
+            var testDuration = endTime - startTime;
             return testDuration.ToString();
         }
 

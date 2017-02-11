@@ -1,4 +1,4 @@
-﻿//© Copyright 2013 Hewlett-Packard Development Company, L.P.
+﻿﻿//© Copyright 2013 Hewlett-Packard Development Company, L.P.
 //Permission is hereby granted, free of charge, to any person obtaining a copy of this software
 //and associated documentation files (the "Software"), to deal in the Software without restriction,
 //including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -26,7 +26,9 @@ using HpToolsLauncher;
 using Analysis.ApiSL;
 using Analysis.Api.Dictionaries;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
+using Analysis.ApiLib;
 
 namespace LRAnalysisLauncher
 {
@@ -52,6 +54,8 @@ namespace LRAnalysisLauncher
         [STAThread]
         static int Main(string[] args)
         {
+            Run currentRun = null;
+            const int usedRun = 0;
             HpToolsLauncher.ConsoleQuickEdit.Disable();
             Console.OutputEncoding = System.Text.Encoding.GetEncoding("utf-8");
             log("starting analysis launcher");
@@ -70,140 +74,83 @@ namespace LRAnalysisLauncher
 
                 log("creating analysis COM object");
                 LrAnalysis analysis = new LrAnalysis();
-                
+                analysis.RunTimeErrors.IsSilentMode = true;
+                analysis.DefaultOptimizationMode = DataOptimization.Memory;
+
                 Session session = analysis.Session;
                 log("creating analysis session");
                 if (session.Create(lralocation, lrrlocation))
                 {
+                    currentRun = session.Runs[usedRun];
+
                     log("analysis session created");
                     log("creating HTML reports");
-                    HtmlReportMaker reportMaker = session.CreateHtmlReportMaker();
-                    reportMaker.AddGraph("Connections");
-                    reportMaker.AddGraph("ConnectionsPerSecond");
-                    reportMaker.CreateDefaultHtmlReport(
-                        Path.Combine(Path.GetDirectoryName(htmlLocation), "IE", Path.GetFileName(htmlLocation)),
-                        ApiBrowserType.IE);
-                    reportMaker.CreateDefaultHtmlReport(
-                        Path.Combine(Path.GetDirectoryName(htmlLocation), "Netscape", Path.GetFileName(htmlLocation)),
-                        ApiBrowserType.Netscape);
-                    log("HTML reports created");
+                    HtmlReportMaker(session, htmlLocation);
 
                     XmlDocument xmlDoc = new XmlDocument();
 
-                    log("loading errors, if any");
-                    session.ErrorMessages.LoadValuesIfNeeded();
-                    if (session.ErrorMessages.Count != 0)
+                    ExtractRunErrors(session, xmlDoc, lrrlocation);
+
+                    XmlElement runsRoot;
+
+                    var runReprotDoc = ExtractRunReportDoc(session, analysis, currentRun, out runsRoot);
+
+                    CloseAnalysisSession(ref analysis,  session,  currentRun);
+
+                    var root = ExtractSlaResults(lralocation, xmlDoc, ref iPassed);
+                    XmlNode slaNode = runReprotDoc.ImportNode(root, true);
+
+                    runsRoot.AppendChild(slaNode);
+                    log("saving RunReport.xml to " +
+                        Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(lrrlocation)), "RunReport.xml"));
+                    runReprotDoc.Save(Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(lrrlocation)),
+                        "RunReport.xml"));
+                    runReprotDoc.RemoveAll();
+
+                    //write XML to location:
+                    log("saving SLA.xml to " +
+                        Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(lrrlocation)), "SLA.xml"));
+                    xmlDoc.Save(Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(lrrlocation)), "SLA.xml"));
+
+                }
+                else
                     {
-                        log("error count: " + session.ErrorMessages.Count);
-                        if (session.ErrorMessages.Count > 1000)
-                        {
-                            log("more then 1000 error during scenario run, analyzing only the first 1000.");
+
+                    log(Resources.CannotCreateSession);
+                    return (int) Launcher.ExitCodeEnum.Aborted;
+                    }
+                log("closing analysis session");
+                CloseAnalysisSession(ref analysis);
+            }
+            catch (TypeInitializationException ex)
+                    {
+                if (ex.InnerException is UnauthorizedAccessException)
+                    log(
+                        "UnAuthorizedAccessException: Please check the account privilege of current user, LoadRunner tests should be run by administrators.");
+                else
+                    {
+                    log(ex.Message);
+                    log(ex.StackTrace);
                         }
-                        log(Resources.ErrorsReportTitle);
-                        XmlElement errorRoot = xmlDoc.CreateElement("Errors");
-                        xmlDoc.AppendChild(errorRoot);
-                        int limit = 1000;
-                        ErrorMessage[] errors = session.ErrorMessages.ToArray();
-                        //foreach (ErrorMessage err in session.ErrorMessages)
-                        for (int i = 0; i < limit && i < errors.Length; i++)
-                        {
-                            ErrorMessage err = errors[i];
-                            XmlElement elem = xmlDoc.CreateElement("Error");
-                            elem.SetAttribute("ID", err.ID.ToString());
-                            elem.AppendChild(xmlDoc.CreateTextNode(err.Name));
-                            log("ID: " + err.ID + " Name: " + err.Name);
-                            errorRoot.AppendChild(elem);
-                        }
-                        xmlDoc.Save(Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(lrrlocation)), "Errors.xml"));
-
-                        xmlDoc.RemoveAll();
-                        log("");
+                return (int) Launcher.ExitCodeEnum.Aborted;
                     }
-                    XmlDocument runReprotDoc = new XmlDocument();
-                    log("Gathering Run statistics");
-                    XmlElement runsRoot = runReprotDoc.CreateElement("Runs");
-                    runReprotDoc.AppendChild(runsRoot);
-
-                    XmlElement general = runReprotDoc.CreateElement("General");
-                    runsRoot.AppendChild(general);
-
-                    XmlElement durationElement = runReprotDoc.CreateElement("Time");
-                    durationElement.SetAttribute("End", "-1");
-                    durationElement.SetAttribute("Start", "-1");
-                    durationElement.SetAttribute("Duration", "-1");
-
-                    Stopper stopper = new Stopper(10000);
-                    stopper.Start();
-                    //foreach (Run currentRun in analysis.Session.Runs)
-                    //{
-                    //    stopper.Start();
-                    //    log("Gathering Duration statistics");
-                    //    stopper.Start();
-                        //DateTime startTime = Helper.FromUnixTime(currentRun.StartTime);
-                        //DateTime endTime = Helper.FromUnixTime(currentRun.EndTime);
-                        //durationElement.SetAttribute("End", endTime.ToString());
-                        //durationElement.SetAttribute("Start", startTime.ToString());
-                        //durationElement.SetAttribute("Duration", Helper.GetScenarioDuration(currentRun));
-                    //}
-                    general.AppendChild(durationElement);
-
-                    XmlElement vUsers = runReprotDoc.CreateElement("VUsers");
-                    //log("Adding VUser statistics");
-                    Dictionary<string, int> vuserCountDictionary = new Dictionary<string, int>(4)
+            catch (Exception e)
                     {
-                        {"Passed", 0},
-                        {"Stopped", 0},
-                        {"Failed", 0},
-                        {"Error", 0}
-                    };
-                    //vuserCountDictionary = Helper.GetVusersCountByStatus(analysis);
-                    foreach (KeyValuePair<string, int> kvp in vuserCountDictionary)
-                    {
-                        //log(msg: String.Format("{0} vUsers: {1}", kvp.Key, kvp.Value));
-                        vUsers.SetAttribute(kvp.Key, kvp.Value.ToString());
+                log(e.Message);
+                log(e.StackTrace);
+                return (int) Launcher.ExitCodeEnum.Aborted;
                     }
-                    vUsers.SetAttribute("Count", session.VUsers.Count.ToString());
-                    general.AppendChild(vUsers);
-
-                    XmlElement transactions = runReprotDoc.CreateElement("Transactions");
-                    Dictionary<string, double> transactionSumStatusDictionary = new Dictionary<string, double>()
-                    {
-                        {"Count", 0},
-                        {"Pass", 0},
-                        {"Fail", 0},
-                        {"Stop", 0}
-                    };
-                    Dictionary<string, Dictionary<string, double>> transactionDictionary =
-                        Helper.CalcFailedTransPercent(analysis);
-                    foreach (KeyValuePair<string, Dictionary<string, double>> kvp in transactionDictionary)
-                    {
-                        XmlElement transaction = runReprotDoc.CreateElement("Transaction");
-                        foreach (var transStatus in kvp.Value)
-                        {
-                            transaction.SetAttribute(transStatus.Key, transStatus.Value.ToString());
-                            transactionSumStatusDictionary[transStatus.Key] += transStatus.Value;
-                            transactionSumStatusDictionary["Count"] += transStatus.Value;
-                        }
-                        transaction.SetAttribute("Name", kvp.Key);
-                        transactions.AppendChild(transaction);
-                    }
-                    foreach (var transStatus in transactionSumStatusDictionary)
-                    {
-                        transactions.SetAttribute(transStatus.Key, transStatus.Value.ToString());
-                        //log(msg: String.Format("{0} transaction: {1}", transStatus.Key, transStatus.Value));
-                    }
-                    general.AppendChild(transactions);
-
-                    string connectionsMaximum = "0";
-                    //connectionsMaximum = Helper.GetConnectionsCount(analysis).ToString();
-                    XmlElement connections = runReprotDoc.CreateElement("Connections");
-                    connections.SetAttribute("MaxCount", connectionsMaximum);
-                    general.AppendChild(connections);
 
 
-                    log("");
-                    log("closing session");
-                    session.Close();
+            // return SLA status code, if any SLA fails return a fail here.
+            // writer.Flush();
+            // writer.Close();
+            return iPassed;
+
+        }
+
+        private static XmlElement ExtractSlaResults(string lralocation, XmlDocument xmlDoc, ref int iPassed)
+        {
                     log(Resources.SLAReportTitle);
                     log("calculating SLA");
                     SlaResult slaResult = Session.CalculateSla(lralocation, true);
@@ -361,55 +308,149 @@ namespace LRAnalysisLauncher
 
                         log(Resources.DoubleLineSeperator);
                     }
+            return root;
+        }
 
-                    XmlNode slaNode = runReprotDoc.ImportNode(root, true);
-                    runsRoot.AppendChild(slaNode);
-                    log("saving RunReport.xml to " +
-                        Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(lrrlocation)), "RunReport.xml"));
-                    runReprotDoc.Save(Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(lrrlocation)),
-                        "RunReport.xml"));
-                    runReprotDoc.RemoveAll();
+        private static XmlDocument ExtractRunReportDoc(Session session, LrAnalysis analysis, Run run, out XmlElement runsRoot)
+        {
+            XmlDocument runReprotDoc = new XmlDocument();
+            log("Gathering Run statistics");
+            runsRoot = runReprotDoc.CreateElement("Runs");
+            runReprotDoc.AppendChild(runsRoot);
 
-                    //write XML to location:
-                    log("saving SLA.xml to " +
-                        Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(lrrlocation)), "SLA.xml"));
-                    xmlDoc.Save(Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(lrrlocation)), "SLA.xml"));
+            XmlElement general = runReprotDoc.CreateElement("General");
+            runsRoot.AppendChild(general);
 
-                }
-                else
-                {
+            XmlElement durationElement = runReprotDoc.CreateElement("Time");
+            durationElement.SetAttribute("End", "-1");
+            durationElement.SetAttribute("Start", "-1");
+            durationElement.SetAttribute("Duration", "-1");
 
-                    log(Resources.CannotCreateSession);
-                    return (int) Launcher.ExitCodeEnum.Aborted;
-                }
-                log("closing analysis session");
-                session.Close();
-            }
-            catch (TypeInitializationException ex)
+            Stopper stopper = new Stopper(10000);
+            stopper.Start();
+
+
+            log("Gathering Duration statistics");
+
+            DateTime startTime = Helper.FromUnixTime(run.StartTime);
+            DateTime endTime = Helper.FromUnixTime(run.EndTime);
+            durationElement.SetAttribute("End", endTime.ToString(CultureInfo.InvariantCulture));
+            durationElement.SetAttribute("Start", startTime.ToString(CultureInfo.InvariantCulture));
+            durationElement.SetAttribute("Duration", Helper.GetScenarioDuration(startTime, endTime));
+
+            general.AppendChild(durationElement);
+
+            XmlElement vUsers = runReprotDoc.CreateElement("VUsers");
+            log("Adding VUser statistics");
+            Dictionary<string, int> vuserCountDictionary = new Dictionary<string, int>(4)
             {
-                if (ex.InnerException is UnauthorizedAccessException)
-                    log(
-                        "UnAuthorizedAccessException: Please check the account privilege of current user, LoadRunner tests should be run by administrators.");
-                else
-                {
-                    log(ex.Message);
-                    log(ex.StackTrace);
-                }
-                return (int) Launcher.ExitCodeEnum.Aborted;
-            }
-            catch (Exception e)
+                {"Passed", 0},
+                {"Stopped", 0},
+                {"Failed", 0},
+                {"Error", 0}
+            };
+            vuserCountDictionary = Helper.GetVusersCountByStatus(analysis);
+            foreach (KeyValuePair<string, int> kvp in vuserCountDictionary)
             {
-                log(e.Message);
-                log(e.StackTrace);
-                return (int) Launcher.ExitCodeEnum.Aborted;
+                log(msg: String.Format("{0} vUsers: {1}", kvp.Key, kvp.Value));
+                vUsers.SetAttribute(kvp.Key, kvp.Value.ToString());
+                }
+            vUsers.SetAttribute("Count", session.VUsers.Count.ToString());
+            general.AppendChild(vUsers);
+
+            XmlElement transactions = runReprotDoc.CreateElement("Transactions");
+            Dictionary<string, double> transactionSumStatusDictionary = new Dictionary<string, double>()
+                {
+                {"Count", 0},
+                {"Pass", 0},
+                {"Fail", 0},
+                {"Stop", 0}
+            };
+            Dictionary<string, Dictionary<string, double>> transactionDictionary =
+                Helper.CalcFailedTransPercent(analysis);
+            foreach (KeyValuePair<string, Dictionary<string, double>> kvp in transactionDictionary)
+            {
+                XmlElement transaction = runReprotDoc.CreateElement("Transaction");
+                foreach (var transStatus in kvp.Value)
+                {
+                    transaction.SetAttribute(transStatus.Key, transStatus.Value.ToString());
+                    transactionSumStatusDictionary[transStatus.Key] += transStatus.Value;
+                    transactionSumStatusDictionary["Count"] += transStatus.Value;
+                }
+                transaction.SetAttribute("Name", kvp.Key);
+                transactions.AppendChild(transaction);
+            }
+            foreach (var transStatus in transactionSumStatusDictionary)
+            {
+                transactions.SetAttribute(transStatus.Key, transStatus.Value.ToString());
+                log(msg: String.Format("{0} transaction: {1}", transStatus.Key, transStatus.Value));
+                }
+            general.AppendChild(transactions);
+
+            string connectionsMaximum = "0";
+            connectionsMaximum = Helper.GetConnectionsCount(analysis).ToString();
+            XmlElement connections = runReprotDoc.CreateElement("Connections");
+            connections.SetAttribute("MaxCount", connectionsMaximum);
+            general.AppendChild(connections);
+
+
+            log("");
+            return runReprotDoc;
             }
 
+        private static void ExtractRunErrors(Session session, XmlDocument xmlDoc, string lrrlocation)
+            {
+            log("loading errors, if any");
+            session.ErrorMessages.LoadValuesIfNeeded();
+            if (session.ErrorMessages.Count != 0)
+            {
+                log("error count: " + session.ErrorMessages.Count);
+                if (session.ErrorMessages.Count > 1000)
+                {
+                    log("more then 1000 error during scenario run, analyzing only the first 1000.");
+            }
+                log(Resources.ErrorsReportTitle);
+                XmlElement errorRoot = xmlDoc.CreateElement("Errors");
+                xmlDoc.AppendChild(errorRoot);
+                int limit = 1000;
+                ErrorMessage[] errors = session.ErrorMessages.ToArray();
+                //foreach (ErrorMessage err in session.ErrorMessages)
+                for (int i = 0; i < limit && i < errors.Length; i++)
+                {
+                    ErrorMessage err = errors[i];
+                    XmlElement elem = xmlDoc.CreateElement("Error");
+                    elem.SetAttribute("ID", err.ID.ToString());
+                    elem.AppendChild(xmlDoc.CreateTextNode(err.Name));
+                    log("ID: " + err.ID + " Name: " + err.Name);
+                    errorRoot.AppendChild(elem);
+                }
+                xmlDoc.Save(Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(lrrlocation)), "Errors.xml"));
 
-            // return SLA status code, if any SLA fails return a fail here.
-            // writer.Flush();
-            // writer.Close();
-            return iPassed;
+                xmlDoc.RemoveAll();
+                log("");
+            }
+        }
 
+        private static void HtmlReportMaker(Session session, string htmlLocation)
+        {
+            HtmlReportMaker reportMaker = session.CreateHtmlReportMaker();
+            reportMaker.AddGraph("Connections");
+            reportMaker.AddGraph("ConnectionsPerSecond");
+            reportMaker.CreateDefaultHtmlReport(
+                Path.Combine(Path.GetDirectoryName(htmlLocation), "IE", Path.GetFileName(htmlLocation)),
+                ApiBrowserType.IE);
+            reportMaker.CreateDefaultHtmlReport(
+                Path.Combine(Path.GetDirectoryName(htmlLocation), "Netscape", Path.GetFileName(htmlLocation)),
+                ApiBrowserType.Netscape);
+            log("HTML reports created");
+        }
+
+        private static void CloseAnalysisSession(ref LrAnalysis analysis, Session _currentSession = null, Run _currentRun = null)
+        {
+            log("closing session");
+            analysis.Session.Close();
+            _currentSession = null;
+            _currentRun = null;
         }
 
         static System.Reflection.Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
@@ -422,7 +463,7 @@ namespace LRAnalysisLauncher
                 log(Resources.CannotLocateInstallDir);
                 Environment.Exit((int)Launcher.ExitCodeEnum.Aborted);
             }
-            //log(Path.Combine(installPath, "bin", name.Name + ".dll"));
+            log(Path.Combine(installPath, "bin", name.Name + ".dll"));
             return System.Reflection.Assembly.LoadFrom(Path.Combine(installPath, "bin", name.Name + ".dll"));
         }
 
