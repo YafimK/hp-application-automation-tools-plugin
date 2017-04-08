@@ -135,21 +135,21 @@ namespace LRAnalysisLauncher
 
                     Stopper stopper = new Stopper(10000);
                     stopper.Start();
-                    //foreach (Run currentRun in analysis.Session.Runs)
-                    //{
-                    //    stopper.Start();
-                    //    log("Gathering Duration statistics");
-                    //    stopper.Start();
-                    //DateTime startTime = Helper.FromUnixTime(currentRun.StartTime);
-                    //DateTime endTime = Helper.FromUnixTime(currentRun.EndTime);
-                    //durationElement.SetAttribute("End", endTime.ToString());
-                    //durationElement.SetAttribute("Start", startTime.ToString());
-                    //durationElement.SetAttribute("Duration", Helper.GetScenarioDuration(currentRun));
-                    //}
+                    foreach (Run currentRun in analysis.Session.Runs)
+                    {
+                        stopper.Start();
+                        log("Gathering Duration statistics");
+                        stopper.Start();
+                        DateTime startTime = Helper.FromUnixTime(currentRun.StartTime);
+                        DateTime endTime = Helper.FromUnixTime(currentRun.EndTime);
+                        durationElement.SetAttribute("End", endTime.ToString());
+                        durationElement.SetAttribute("Start", startTime.ToString());
+                        durationElement.SetAttribute("Duration", Helper.GetScenarioDuration(currentRun));
+                    }
                     general.AppendChild(durationElement);
 
                     XmlElement vUsers = runReprotDoc.CreateElement("VUsers");
-                    //log("Adding VUser statistics");
+                    log("Adding VUser statistics");
                     Dictionary<string, int> vuserCountDictionary = new Dictionary<string, int>(4)
                     {
                         {"Passed", 0},
@@ -157,10 +157,10 @@ namespace LRAnalysisLauncher
                         {"Failed", 0},
                         {"Error", 0}
                     };
-                    //vuserCountDictionary = Helper.GetVusersCountByStatus(analysis);
+                    vuserCountDictionary = Helper.GetVusersCountByStatus(analysis);
                     foreach (KeyValuePair<string, int> kvp in vuserCountDictionary)
                     {
-                        //log(msg: String.Format("{0} vUsers: {1}", kvp.Key, kvp.Value));
+                        log(msg: String.Format("{0} vUsers: {1}", kvp.Key, kvp.Value));
                         vUsers.SetAttribute(kvp.Key, kvp.Value.ToString());
                     }
                     vUsers.SetAttribute("Count", session.VUsers.Count.ToString());
@@ -191,12 +191,12 @@ namespace LRAnalysisLauncher
                     foreach (var transStatus in transactionSumStatusDictionary)
                     {
                         transactions.SetAttribute(transStatus.Key, transStatus.Value.ToString());
-                        //log(msg: String.Format("{0} transaction: {1}", transStatus.Key, transStatus.Value));
+                        log(msg: String.Format("{0} transaction: {1}", transStatus.Key, transStatus.Value));
                     }
                     general.AppendChild(transactions);
 
                     string connectionsMaximum = "0";
-                    //connectionsMaximum = Helper.GetConnectionsCount(analysis).ToString();
+                    connectionsMaximum = Helper.GetConnectionsCount(analysis).ToString();
                     XmlElement connections = runReprotDoc.CreateElement("Connections");
                     connections.SetAttribute("MaxCount", connectionsMaximum);
                     general.AppendChild(connections);
