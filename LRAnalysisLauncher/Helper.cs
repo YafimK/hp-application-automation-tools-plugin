@@ -44,8 +44,7 @@ namespace LRAnalysisLauncher
                 {"Error"}
             };
 
-            try
-            {
+
                 Console.Write("Counting vUser Results for this scenario from ");
                 FilterItem filterDimensionVUser;
                 FilterItem item;
@@ -100,12 +99,8 @@ namespace LRAnalysisLauncher
                         vuserDictionary.Add("MaxVuserRun", (int)Math.Round(vUserMax));
                         ConsoleWriter.WriteLine(String.Format("{0} maximum vUser ran per {1} seconds", vUserMax, vUserStateGraph.Granularity));
                     }
-            }
-            catch (StackOverflowException exception)
-            {
-                ConsoleWriter.WriteLine(String.Format("Debug: Error on getting VUsers from Analysis" + exception));
-            }
-
+            
+ 
             return vuserDictionary;
         }
 
@@ -158,8 +153,7 @@ namespace LRAnalysisLauncher
         {
             double connectionsCount = 0;
 
-            try
-            {
+
                 Graph g;
                 // check if Connections graph has data
                 if (lrAnalysis.Session.Runs[0].Graphs.TryGetValue("Connections", out g) != true)
@@ -186,11 +180,7 @@ namespace LRAnalysisLauncher
                 {
                     connectionsCount = -1;
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.Write(Resources.Helper_GetConnectionsCount_ + ex.Message);
-            }
+
 
             return connectionsCount;
         }
